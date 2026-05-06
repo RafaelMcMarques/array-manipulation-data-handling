@@ -1,6 +1,5 @@
 import os.path
 import json
-import scipy.misc
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -20,16 +19,38 @@ class ImageGenerator:
 
         self.class_dict = {0: 'airplane', 1: 'automobile', 2: 'bird', 3: 'cat', 4: 'deer', 5: 'dog', 6: 'frog',
                            7: 'horse', 8: 'ship', 9: 'truck'}
-        #TODO: implement constructor
+        
+        def __init__(file_path, label_path, batch_size, image_size, rotation=False, mirroring=False, shuffle=False):
+            self.file_path = file_path
+            self.label_path = label_path
+            self.batch_size = batch_size
+            self.image_size = image_size
+            self.rotation = rotation
+            self.mirroring = mirroring
+            self.shuffle = shuffle
 
-    def next(self):
+            self.current_image_index = 0
+
+
+    def next(self, resize=False):
         # This function creates a batch of images and corresponding labels and returns them.
         # In this context a "batch" of images just means a bunch, say 10 images that are forwarded at once.
         # Note that your amount of total data might not be divisible without remainder with the batch_size.
         # Think about how to handle such cases
-        #TODO: implement next method
-        pass
+        for i in range(self.batch_size):
+            image_path = os.path.join(self.file_path, f'{self.current_image_index}.npy')
+            image = matplotlib.image.imread(image_path)
+            if resize:
+                image = np.resize(image, (self.image_size, self.image_size, 3))
+            batch.images.append(image)
+            label = self.class_dict[self.label_path[str(self.current_image_index)]]
+            batch.labels.append(label)
+            self.current_image_index += 1
+            if self.current_image_index == 99:
+                self.current_image_index = 0
+
         #return images, labels
+        return batch
 
     def augment(self,img):
         # this function takes a single image as an input and performs a random transformation
