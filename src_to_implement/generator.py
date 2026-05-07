@@ -2,6 +2,8 @@ import os.path
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+import skimage as ski
+
 
 # In this exercise task you will implement an image generator. Generator objects in python are defined as having a next function.
 # This next function returns the next generated object. In our case it returns the input of a neural network each time it gets called.
@@ -55,6 +57,7 @@ class ImageGenerator:
         if self.epoch_finished:
             self.current_epoch_num += 1
             self.epoch_finished = False
+            self.current_image_index = 0
             if self.shuffle:
                 np.random.shuffle(self.indices)
 
@@ -64,17 +67,15 @@ class ImageGenerator:
             image = np.load(image_path)
 
             ## resize ## 
-            h, w, c = image.shape
-            new_h, new_w, new_c = self.image_size
-            row_idx = np.linspace(0, h - 1, new_h).astype(int)
-            col_idx = np.linspace(0, w - 1, new_w).astype(int)
-            image = image[row_idx][:, col_idx]
+            image = ski.transform.resize(image, self.image_size)
 
             if self.rotation or self.mirroring:
                 image = self.augment(image)
+
             images.append(image)
             label = int(self.label_path[str(idx)])
             labels.append(label)
+
             self.current_image_index += 1
             if self.current_image_index == len(self.indices):
                 self.current_image_index = 0
@@ -86,16 +87,13 @@ class ImageGenerator:
     def augment(self,img):
         # this function takes a single image as an input and performs a random transformation
         # (mirroring and/or rotation) on it and outputs the transformed image
-        choice = np.random.choice([0, 1, 2])
-        if choice == 0:
-            if self.rotation:
-                angle = np.random.choice([1, 2, 3])
-                img = np.rot90(img, angle) # rotate the image by the chosen angle
-        if choice == 1:
-            if self.mirroring:
-                img = np.fliplr(img) # flip the image horizontally
-        if choice == 2:
-            pass # do nothing
+        if self.rotation:
+            angle = np.random.choice([0, 1, 2, 3])
+            img = np.rot90(img, angle) # rotate the image by the chosen angle
+
+        if self.mirroring and np.random.random() > 0.5:
+           img = np.fliplr(img) 
+
         return img
 
     def current_epoch(self):
@@ -109,10 +107,10 @@ class ImageGenerator:
     def show(self):
         # In order to verify that the generator creates batches as required, this functions calls next to get a
         # batch of images and labels and visualizes it.
-        batch = self.next(resize=True)
+        batch, labels = self.next()
         fig, axes = plt.subplots(1, self.batch_size, figsize=(15, 5))
         for i in range(self.batch_size):
-            axes[i].imshow(batch[0][i])
-            axes[i].set_title(batch[1][i])
+            axes[i].imshow(batch[i])
+            axes[i].set_title(self.class_name(labels[i]))
             axes[i].axis('off')
         plt.show()
