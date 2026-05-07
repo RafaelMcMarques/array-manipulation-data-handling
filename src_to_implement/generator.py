@@ -1,4 +1,5 @@
 import os.path
+import os
 import json
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,14 +23,18 @@ class ImageGenerator:
         
         def __init__(file_path, label_path, batch_size, image_size, rotation=False, mirroring=False, shuffle=False):
             self.file_path = file_path
-            self.label_path = label_path
             self.batch_size = batch_size
             self.image_size = image_size
             self.rotation = rotation
             self.mirroring = mirroring
             self.shuffle = shuffle
 
+            with open(label_path, "r") as f:
+                self.label_path = json.load(f)
+
+            self.indices = list(range(len(self.label_path)))
             self.current_image_index = 0
+
 
 
     def next(self, resize=False):
@@ -37,13 +42,18 @@ class ImageGenerator:
         # In this context a "batch" of images just means a bunch, say 10 images that are forwarded at once.
         # Note that your amount of total data might not be divisible without remainder with the batch_size.
         # Think about how to handle such cases
+
+        if self.shuffle == True:
+            np.random.shuffle(self.indices)
+
         for i in range(self.batch_size):
-            image_path = os.path.join(self.file_path, f'{self.current_image_index}.npy')
+            idx = self.indices[self.current_image_index]
+            image_path = os.path.join(self.file_path, f'{idx}.npy')
             image = matplotlib.image.imread(image_path)
             if resize:
                 image = np.resize(image, (self.image_size, self.image_size, 3))
             batch.images.append(image)
-            label = self.class_dict[self.label_path[str(self.current_image_index)]]
+            label = self.class_dict[self.label_path[str(idx)]]
             batch.labels.append(label)
             self.current_image_index += 1
             if self.current_image_index == 99:
